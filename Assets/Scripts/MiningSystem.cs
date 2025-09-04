@@ -12,6 +12,8 @@ public class MiningSystem : MonoBehaviour
     [Header("Mining Tick")]
     [SerializeField] float ticksPerSecond = 3f;
     [SerializeField] int damagePerTick = 1;
+    [SerializeField] float candidatePadding = 0.5f; // 후보 수집 반경 여유(자원 크기 다양성 대비)
+    [SerializeField] float epsilon = 0.01f;         // 수치 안정용
 
     [Header("Dwell (start mining only when settled)")]
     [SerializeField] float settleTime = 0.35f;
@@ -36,6 +38,7 @@ public class MiningSystem : MonoBehaviour
     float smoothedSpeed, dwellT, tickT;
 
     static readonly Collider2D[] buf = new Collider2D[256];
+    static readonly Collider2D[] tmp = new Collider2D[256];
     ContactFilter2D filter;
 
     // ---------- 반경 단일 소스 적용 ----------
@@ -151,19 +154,28 @@ public class MiningSystem : MonoBehaviour
 
     void MineTick()
     {
-        // 트랜스폼 변경을 물리에 즉시 반영 (커서를 Transform로 이동시키는 구조이므로 필요)
         Physics2D.SyncTransforms();
 
-        // ⚠️ CircleCollider2D는 OverlapCollider를 사용
-        int hitCount = sensor.OverlapCollider(filter, buf);
+        // 센터/반경 (시각화 링과 1:1)
+        Vector2 c = (Vector2)sensor.transform.position + sensor.offset;
+        float r = GetWorldRadius();
+        float r2 = r * r + epsilon * epsilon;
 
-        for (int i = 0; i < hitCount; i++)
+        // 1) 링보다 약간 넓게 후보 수집 (겹치지 않아도 "가까운" 것들 포함)
+        int n = Physics2D.OverlapCircle(c, r + candidatePadding, filter, tmp);
+
+        // 2) 후보들에 대해 "가장 가까운 점" 거리로 최종 판정
+        for (int i = 0; i < n; i++)
         {
-            var col = buf[i];
+            var col = tmp[i];
             if (!col) continue;
 
-            if (col.TryGetComponent(out Mineable m))
-                m.ApplyDamage(damagePerTick);
+            Vector2 q = col.ClosestPoint(c);          // 어떤 모양(Box/Poly/Circle)이라도 OK
+            if ((q - c).sqrMagnitude <= r2)           // 링 안이라면 히트
+            {
+                if (col.TryGetComponent(out Mineable m))
+                    m.ApplyDamage(damagePerTick);
+            }
         }
     }
 
