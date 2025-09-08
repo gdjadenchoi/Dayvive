@@ -328,3 +328,4 @@ MonoBehaviour:
   maxHP: 10
   hp: 0
   hpText: {fileID: 6668012177819285948}
+  lootTable: {fileID: 11400000, guid: 646ba3dfd69a8b44eae486ac10d4195c, type: 2}

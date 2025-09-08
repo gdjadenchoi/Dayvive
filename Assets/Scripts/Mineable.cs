@@ -2,6 +2,7 @@
 using UnityEngine;
 using TMPro;
 
+[RequireComponent(typeof(Collider2D))]
 public class Mineable : MonoBehaviour
 {
     [Header("Identity")]
@@ -14,16 +15,16 @@ public class Mineable : MonoBehaviour
     [Header("UI")]
     [SerializeField] private TMP_Text hpText; // 3D/UGUI 모두 가능
 
+    [Header("Loot")]
+    [SerializeField] private LootTable lootTable; // 인스펙터에서 연결(A/B용)
+
     void Awake()
     {
-        // 자동 바인딩 (런타임)
         if (hpText == null) hpText = GetComponentInChildren<TMP_Text>(true);
-
         if (hpText == null)
         {
             Debug.LogError($"[Mineable] TMP_Text not found under '{name}'. " +
-                           $"Add a TextMeshPro(3D) or TextMeshProUGUI child named 'HPText' (or any), " +
-                           $"or drag it to 'hpText' slot in Inspector.", this);
+                           "HP 표시용 텍스트를 자식에 두거나, hpText 슬롯에 드래그하세요.", this);
         }
 
         hp = maxHP;
@@ -33,10 +34,9 @@ public class Mineable : MonoBehaviour
 #if UNITY_EDITOR
     void OnValidate()
     {
-        // 에디터에서 값이 바뀌거나 프리팹 열었을 때 자동 연결
         if (hpText == null)
             hpText = GetComponentInChildren<TMP_Text>(true);
-        // 미리보기 숫자 갱신
+
         if (!Application.isPlaying) UpdateText();
     }
 #endif
@@ -55,6 +55,19 @@ public class Mineable : MonoBehaviour
 
     void OnMined()
     {
+        // 드롭 적립
+        if (lootTable != null && RunInventory.I != null)
+        {
+            var drops = lootTable.Roll();           // drop.itemId, drop.count 가정
+            foreach (var drop in drops)
+                RunInventory.I.Add(drop.itemId, drop.count);
+        }
+        else
+        {
+            // 테이블이 없으면 임시로 자기 id 1개 적립
+            if (RunInventory.I != null) RunInventory.I.Add(id, 1);
+        }
+
         Destroy(gameObject);
     }
 }
