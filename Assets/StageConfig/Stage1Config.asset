@@ -16,8 +16,8 @@ MonoBehaviour:
   - id: A
     prefab: {fileID: 353394664265794391, guid: f43af47f6dcf1df419e7a1dcd869322d, type: 3}
     startCount: 12
-    minOnField: 8
-    refillBatch: 4
+    minOnField: 6
+    refillBatch: 3
   - id: B
     prefab: {fileID: 4041428088122562489, guid: 2f37d70bebbcb8243b5641c42b5ee3f8, type: 3}
     startCount: 6

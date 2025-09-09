@@ -1,4 +1,5 @@
-// Assets/Scripts/Mineable.cs
+ï»¿// Assets/Scripts/Mineable.cs
+using System.Collections;
 using UnityEngine;
 using TMPro;
 
@@ -9,65 +10,84 @@ public class Mineable : MonoBehaviour
     public string id = "A";
 
     [Header("Health")]
-    public int maxHP = 5;
-    [HideInInspector] public int hp;
+    public int hpMax = 3;
+    [HideInInspector] public int hp = 3; // ì¸ìŠ¤í™í„° í˜¼ë™ ë°©ì§€
 
-    [Header("UI")]
-    [SerializeField] private TMP_Text hpText; // 3D/UGUI ¸ğµÎ °¡´É
+    [Header("UI (Optional)")]
+    [SerializeField] TextMeshPro hpText;
 
-    [Header("Loot")]
-    [SerializeField] private LootTable lootTable; // ÀÎ½ºÆåÅÍ¿¡¼­ ¿¬°á(A/B¿ë)
+    [Header("Drops")]
+    [SerializeField] LootTable lootTable; // ì—†ìœ¼ë©´ id 1ê°œ ê¸°ë³¸ ì§€ê¸‰
 
-    void Awake()
-    {
-        if (hpText == null) hpText = GetComponentInChildren<TMP_Text>(true);
-        if (hpText == null)
-        {
-            Debug.LogError($"[Mineable] TMP_Text not found under '{name}'. " +
-                           "HP Ç¥½Ã¿ë ÅØ½ºÆ®¸¦ ÀÚ½Ä¿¡ µÎ°Å³ª, hpText ½½·Ô¿¡ µå·¡±×ÇÏ¼¼¿ä.", this);
-        }
+    // íŒŒê´´ ì‹œ ë¦¬í•„ ìš”ì²­ì„ ìœ„í•œ StageController ìºì‹œ (ì •ì )
+    static StageController s_stage;
 
-        hp = maxHP;
-        UpdateText();
-    }
-
-#if UNITY_EDITOR
     void OnValidate()
     {
-        if (hpText == null)
-            hpText = GetComponentInChildren<TMP_Text>(true);
-
-        if (!Application.isPlaying) UpdateText();
+        if (hpMax < 1) hpMax = 1;
+        hp = Mathf.Clamp(hp, 0, hpMax);
+        UpdateHpUI();
     }
+
+    void OnEnable()
+    {
+        hp = hpMax;           // í•­ìƒ í’€í”¼ë¡œ ì‹œì‘
+        UpdateHpUI();
+        EnsureStageCached();
+    }
+
+    void EnsureStageCached()
+    {
+#if UNITY_2022_2_OR_NEWER
+        if (s_stage == null) s_stage = Object.FindFirstObjectByType<StageController>();
+#else
+        if (s_stage == null) s_stage = Object.FindObjectOfType<StageController>();
 #endif
-
-    public void ApplyDamage(int damage)
-    {
-        hp -= damage;
-        UpdateText();
-        if (hp <= 0) OnMined();
     }
 
-    void UpdateText()
+    // ê¸°ì¡´ MiningSystemê³¼ í˜¸í™˜
+    public void ApplyDamage(int dmg = 1) => TakeDamage(dmg);
+
+    public void TakeDamage(int dmg = 1)
     {
-        if (hpText != null) hpText.text = hp.ToString();
+        if (hp <= 0) return;
+        hp = Mathf.Max(0, hp - dmg);
+        UpdateHpUI();
+        if (hp == 0) Die();
     }
 
-    void OnMined()
+    void UpdateHpUI()
     {
-        // µå·Ó Àû¸³
-        if (lootTable != null && RunInventory.I != null)
+        if (hpText) hpText.text = hp.ToString();
+    }
+
+    void Die()
+    {
+        // ë“œë¡­
+        if (lootTable != null)
         {
-            var drops = lootTable.Roll();           // drop.itemId, drop.count °¡Á¤
-            foreach (var drop in drops)
-                RunInventory.I.Add(drop.itemId, drop.count);
+            var drops = lootTable.Roll(); // drop.itemId, drop.count
+            foreach (var d in drops) RunInventory.I?.Add(d.itemId, d.count);
         }
         else
         {
-            // Å×ÀÌºíÀÌ ¾øÀ¸¸é ÀÓ½Ã·Î ÀÚ±â id 1°³ Àû¸³
-            if (RunInventory.I != null) RunInventory.I.Add(id, 1);
+            RunInventory.I?.Add(id, 1);
         }
 
+        // ë‹¤ìŒ í”„ë ˆì„ì— ë¦¬í•„ ì²´í¬ (ì´ ì˜¤ë¸Œì íŠ¸ê°€ ì‹¤ì œë¡œ ì‚¬ë¼ì§„ ë’¤ ì¹´ìš´íŠ¸í•˜ê²Œ)
+        // StartCoroutine(_RefillNextFrame());
+        EnsureStageCached();
+        s_stage?.RequestRefillNextFrame();
+
         Destroy(gameObject);
+    }
+
+    IEnumerator _RefillNextFrame()
+    {
+        yield return null;
+        if (s_stage != null)
+        {
+            s_stage.RefillIfNeeded();
+        }
     }
 }

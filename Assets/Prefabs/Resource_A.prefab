@@ -149,8 +149,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   id: A
-  maxHP: 5
-  hp: 0
+  hpMax: 5
+  hp: 3
   hpText: {fileID: 9078450518330824653}
   lootTable: {fileID: 11400000, guid: 24b138a48f6691442b4e609ee2402348, type: 2}
 --- !u!1 &5760505017769854944
@@ -255,7 +255,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 0
+  m_text: 3
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
