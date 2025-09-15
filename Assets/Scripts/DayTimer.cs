@@ -51,6 +51,9 @@ public class DayTimer : MonoBehaviour
     [ContextMenu("Start Day")]
     public void StartDay()
     {
+        // 하루 시작 시 오늘 합계 초기화
+        if (RunInventory.I != null) RunInventory.I.ClearDay();
+
         IsRunning = true;
         TimeLeft = Mathf.Max(0.01f, secondsPerDay);
         if (endPanel) endPanel.SetActive(false);
@@ -70,7 +73,7 @@ public class DayTimer : MonoBehaviour
 
         // 요약 패널 표시
         if (endPanel) endPanel.SetActive(true);
-        if (summaryLabel) summaryLabel.text = BuildSummaryText();
+        if (summaryLabel) summaryLabel.text = BuildSummaryText_NoReflection();
 
         onDayEnd?.Invoke();
     }
@@ -103,47 +106,28 @@ public class DayTimer : MonoBehaviour
         }
     }
 
-    string BuildSummaryText()
+    // 리플렉션 제거 버전: 직접 RunInventory.I 참조
+    string BuildSummaryText_NoReflection()
     {
-        // RunInventory(I) 가 있으면 내용 보여주고, 없으면 기본 메세지
-        var invType = System.Type.GetType("RunInventory");
-        if (invType != null)
+        var inv = RunInventory.I;
+        var sb = new StringBuilder();
+        sb.AppendLine($"Day {DayIndex} 결과");
+
+        if (inv == null)
         {
-            // 정석 구현 가정:
-            // - public static RunInventory I { get; }
-            // - public System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string,int>> All()
-            var instProp = invType.GetProperty("I");
-            var inst = instProp != null ? instProp.GetValue(null) : null;
-
-            if (inst != null)
-            {
-                var allMethod = invType.GetMethod("All");
-                if (allMethod != null)
-                {
-                    var enumerable = allMethod.Invoke(inst, null) as System.Collections.IEnumerable;
-
-                    var sb = new StringBuilder();
-                    sb.AppendLine($"Day {DayIndex} 결과");
-                    bool any = false;
-                    foreach (var item in enumerable)
-                    {
-                        // KeyValuePair<string,int> 읽기
-                        var t = item.GetType();
-                        var k = t.GetProperty("Key")?.GetValue(item)?.ToString();
-                        var vObj = t.GetProperty("Value")?.GetValue(item);
-                        int v = vObj != null ? (int)vObj : 0;
-
-                        sb.AppendLine($"- {k} x{v}");
-                        any = true;
-                    }
-                    if (!any) sb.AppendLine("- 획득 없음");
-
-                    return sb.ToString();
-                }
-            }
+            sb.AppendLine("- 인벤토리 시스템 없음");
+            return sb.ToString();
         }
 
-        // 인벤토리 시스템이 아직 없을 때
-        return $"Day {DayIndex} 종료\n- 인벤토리 시스템 없음";
+        // RunInventory에 All() 추가된 상태 가정
+        bool any = false;
+        foreach (var kv in inv.All())
+        {
+            sb.AppendLine($"- {kv.Key} x{kv.Value}");
+            any = true;
+        }
+        if (!any) sb.AppendLine("- 획득 없음");
+
+        return sb.ToString();
     }
 }

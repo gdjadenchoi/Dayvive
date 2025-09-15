@@ -32,6 +32,10 @@ public class RunInventory : MonoBehaviour
 
     public void ClearDay() => day.Clear();
 
+    // DayTimer.BuildSummaryText()에서 리플렉션으로 호출하는 메서드
+    // "오늘" 획득한 자원 목록을 그대로 넘겨준다.
+    public IEnumerable<KeyValuePair<string, int>> All() => day;
+
     public string BuildDaySummary()
     {
         if (day.Count == 0) return "오늘은 아무것도 얻지 못했어요.";
