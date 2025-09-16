@@ -40,7 +40,7 @@ public class RangeVisualizer : MonoBehaviour
     void LateUpdate()
     {
         // --- Mining 모드에서만 보이게 ---
-        bool active = playerMode == null || playerMode.CurrentMode == PlayerMode.Mode.Mining;
+        bool active = playerMode == null || playerMode.Current == PlayerMode.Mode.Mining;
         lr.enabled = active;
         if (!active || !sensor) return;
 

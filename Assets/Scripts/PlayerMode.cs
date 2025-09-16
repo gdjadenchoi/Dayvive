@@ -1,36 +1,52 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
 public class PlayerMode : MonoBehaviour
 {
     public enum Mode { Mining, Combat }
-    public Mode CurrentMode { get; private set; } = Mode.Mining;
 
-    [Header("UI References")]
-    [SerializeField] GameObject miningUI;   // RangeRing 등
-    [SerializeField] GameObject combatUI;   // CombatAimGuide 등
+    [SerializeField] Mode mode = Mode.Mining;
+    public Mode Current => mode;
 
+    // 외부에서 쓰기 쉬운 헬퍼
+    public bool IsMining => mode == Mode.Mining;
+    public bool IsCombat => mode == Mode.Combat;
+
+    // UI/시스템 알림용
     public event Action<Mode> OnModeChanged;
 
-    void Awake() => UpdateUI();
+    [Header("UI References")]
+    [SerializeField] GameObject miningUI;
+    [SerializeField] GameObject combatUI;
+
+    void Awake() => ApplyModeVisuals();
 
     void Update()
     {
+        // Space 토글(원하면 다른 입력으로 바꿔도 됨)
         if (Input.GetKeyDown(KeyCode.Space))
-            ToggleMode();
+            Toggle();
     }
 
-    public void ToggleMode()
+    public void Toggle()
     {
-        CurrentMode = (CurrentMode == Mode.Mining) ? Mode.Combat : Mode.Mining;
-        UpdateUI();
-        OnModeChanged?.Invoke(CurrentMode);
-        Debug.Log($"Mode: {CurrentMode}");
+        mode = (mode == Mode.Mining) ? Mode.Combat : Mode.Mining;
+        ApplyModeVisuals();
+        OnModeChanged?.Invoke(mode);
+        Debug.Log($"Mode: {mode}");
     }
 
-    void UpdateUI()
+    public void SetMode(Mode m)
     {
-        if (miningUI) miningUI.SetActive(CurrentMode == Mode.Mining);
-        if (combatUI) combatUI.SetActive(CurrentMode == Mode.Combat);
+        if (mode == m) return;
+        mode = m;
+        ApplyModeVisuals();
+        OnModeChanged?.Invoke(mode);
+    }
+
+    void ApplyModeVisuals()
+    {
+        if (miningUI) miningUI.SetActive(IsMining);
+        if (combatUI) combatUI.SetActive(IsCombat);
     }
 }

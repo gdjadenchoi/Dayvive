@@ -76,7 +76,7 @@ public class MiningSystem : MonoBehaviour
     void Update()
     {
         // === Combat 모드 가드: 채굴 완전 비활성 ===
-        if (playerMode && playerMode.CurrentMode != PlayerMode.Mode.Mining)
+        if (playerMode && playerMode.Current != PlayerMode.Mode.Mining)
         {
             ResetDwell();                 // 게이지/상태 초기화
             if (debugLog) debugState = "DISABLED (Combat)";

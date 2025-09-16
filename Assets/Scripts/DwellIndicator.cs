@@ -39,7 +39,7 @@ public class DwellIndicator : MonoBehaviour
     void LateUpdate()
     {
         // 모드 가드
-        if (playerMode && playerMode.CurrentMode != PlayerMode.Mode.Mining) { Hide(); return; }
+        if (playerMode && playerMode.Current != PlayerMode.Mode.Mining) { Hide(); return; }
         if (!mining || !mining.enabled) { Hide(); return; }
 
         // 센터/반경 (월드)

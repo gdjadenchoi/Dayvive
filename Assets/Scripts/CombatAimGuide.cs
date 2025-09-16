@@ -4,9 +4,12 @@ using UnityEngine;
 public class CombatAimGuide : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] Transform player;            // 보통 Player transform
-    [SerializeField] Camera cam;                  // 메인 카메라
-    [SerializeField] PlayerMode playerMode;       // ← 모드 확인
+    [SerializeField] Transform player;        // 보통 Player transform
+    [SerializeField] Camera cam;              // 메인 카메라
+    [SerializeField] PlayerMode playerMode;   // 모드 확인
+
+    [Header("Ammo")]
+    [SerializeField] CombatAmmo ammo;         // ← 이 필드가 인스펙터 슬롯으로 보임
 
     [Header("Range")]
     [SerializeField] float maxRange = 6f;
@@ -16,7 +19,7 @@ public class CombatAimGuide : MonoBehaviour
     [SerializeField] float lineWidth = 0.06f;
     [SerializeField] Color canShootColor = new Color(1f, 0.3f, 0.2f, 0.9f);
     [SerializeField] Color noAmmoColor = new Color(0.6f, 0.6f, 0.6f, 0.7f);
-    [SerializeField] bool simulateHasAmmo = true; // 임시
+    [SerializeField] bool simulateHasAmmo = false; // 테스트용 토글(실탄 연결 없을 때 사용)
 
     LineRenderer lr;
 
@@ -36,21 +39,34 @@ public class CombatAimGuide : MonoBehaviour
         if (!cam) cam = Camera.main;
         if (!player) player = transform.root;
         if (!playerMode) playerMode = GetComponentInParent<PlayerMode>();
+        if (!ammo) ammo = GetComponentInParent<CombatAmmo>(); // 있으면 자동 바인딩
 
         ApplyColor();
-        UpdateEnable(); // 시작 시 모드 반영
-        // PlayerMode 이벤트로도 반영 (있으면)
-        if (playerMode != null) playerMode.OnModeChanged += _ => UpdateEnable();
+        UpdateEnable();
+
+        if (playerMode) playerMode.OnModeChanged += OnModeChanged;
+        if (ammo) ammo.OnAmmoChanged += OnAmmoChanged;
     }
 
     void OnDestroy()
     {
-        if (playerMode != null) playerMode.OnModeChanged -= _ => UpdateEnable();
+        if (playerMode) playerMode.OnModeChanged -= OnModeChanged;
+        if (ammo) ammo.OnAmmoChanged -= OnAmmoChanged;
+    }
+
+    void OnModeChanged(PlayerMode.Mode _)
+    {
+        UpdateEnable();
+    }
+
+    void OnAmmoChanged()
+    {
+        ApplyColor();
     }
 
     void Update()
     {
-        // 모드 체크: Combat일 때만 라인 그리기
+        // 전투 모드가 아니면 숨김
         if (!IsCombat())
         {
             if (lr.enabled) lr.enabled = false;
@@ -60,6 +76,7 @@ public class CombatAimGuide : MonoBehaviour
 
         if (!player || !cam) return;
 
+        // 마우스 방향 계산
         Vector3 m = cam.ScreenToWorldPoint(Input.mousePosition);
         m.z = player.position.z;
 
@@ -69,19 +86,20 @@ public class CombatAimGuide : MonoBehaviour
         if (dist < 1e-4f) return;
         dir /= dist;
 
-        Vector3 end = clampToMaxRange && dist > maxRange ? start + dir * maxRange : m;
+        Vector3 end = (clampToMaxRange && dist > maxRange) ? start + dir * maxRange : m;
 
         lr.positionCount = 2;
         lr.SetPosition(0, start);
         lr.SetPosition(1, end);
 
-        lr.startColor = lr.endColor = simulateHasAmmo ? canShootColor : noAmmoColor;
+        // 현재 탄 보유에 따라 색상 갱신
+        lr.startColor = lr.endColor = HasAmmoNow() ? canShootColor : noAmmoColor;
     }
 
-    public void SetHasAmmo(bool hasAmmo)
+    bool HasAmmoNow()
     {
-        simulateHasAmmo = hasAmmo;
-        ApplyColor();
+        // ammo 컴포넌트가 있으면 그 값을, 없으면 테스트 토글 사용
+        return ammo ? ammo.HasAmmo : simulateHasAmmo;
     }
 
     public void SetMaxRange(float r) => maxRange = Mathf.Max(0f, r);
@@ -89,17 +107,14 @@ public class CombatAimGuide : MonoBehaviour
     void ApplyColor()
     {
         if (!lr) return;
-        lr.startColor = lr.endColor = simulateHasAmmo ? canShootColor : noAmmoColor;
         lr.widthMultiplier = lineWidth;
+        lr.startColor = lr.endColor = HasAmmoNow() ? canShootColor : noAmmoColor;
     }
 
-    bool IsCombat() => playerMode == null || playerMode.CurrentMode == PlayerMode.Mode.Combat;
+    bool IsCombat() => playerMode == null || playerMode.Current == PlayerMode.Mode.Combat;
 
     void UpdateEnable()
     {
-        // 모드 바뀔 때 바로 켜고/끄기
-        bool show = IsCombat();
-        if (lr) lr.enabled = show;
-        // CombatUI가 Mining에서 강제로 켜져 있어도, 이 스크립트가 스스로 숨김
+        if (lr) lr.enabled = IsCombat();
     }
 }
