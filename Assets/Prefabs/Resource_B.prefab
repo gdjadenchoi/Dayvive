@@ -188,6 +188,7 @@ GameObject:
   - component: {fileID: 55977986742069520}
   - component: {fileID: 4585506200576298668}
   - component: {fileID: 3511975469620535998}
+  - component: {fileID: -7255730460477378312}
   m_Layer: 3
   m_Name: Resource_B
   m_TagString: Resource
@@ -329,3 +330,15 @@ MonoBehaviour:
   hp: 1
   hpText: {fileID: 6668012177819285948}
   lootTable: {fileID: 11400000, guid: 646ba3dfd69a8b44eae486ac10d4195c, type: 2}
+--- !u!114 &-7255730460477378312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4041428088122562489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c109dc4139dc1c458bbc2a1cdc2ce04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
