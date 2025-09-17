@@ -1,0 +1,27 @@
+﻿# Hierarchy – SampleScene
+└─ Main Camera
+└─ SpawnArea
+└─ StageController
+└─ Player
+  └─ Cursor
+  └─ Sensor
+  └─ CombatUI
+    └─ Canvas
+      └─ AmmoText
+  └─ MinigUI
+    └─ RangeRing
+    └─ DwellIndicator
+└─ DayTimer
+└─ Canvas
+  └─ SafeArea
+    └─ TopBar
+      └─ TimerText
+    └─ BottomBar
+    └─ CenterStage
+      └─ EndPanel
+        └─ SummaryText
+        └─ NextDayButton
+          └─ Text (TMP)
+└─ EventSystem
+└─ RunInventory
+└─ StageHooks
