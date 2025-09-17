@@ -1022,7 +1022,7 @@ MonoBehaviour:
   cam: {fileID: 519420031}
   playerMode: {fileID: 1734826531}
   ammo: {fileID: 1734826534}
-  maxRange: 6
+  maxRange: 8
   clampToMaxRange: 1
   lineWidth: 0.06
   canShootColor: {r: 1, g: 0.3, b: 0.2, a: 0.9}
@@ -2408,15 +2408,15 @@ MonoBehaviour:
   cam: {fileID: 519420031}
   muzzle: {fileID: 0}
   ammo: {fileID: 1734826534}
-  maxRange: 12
+  aimGuide: {fileID: 677865688}
+  maxRange: 8
   fireCooldown: 0.2
   projectilePrefab: {fileID: -524564332554067475, guid: 3a48521c823bf9243a262b5ceeca9b10, type: 3}
   projectileSpeed: 20
   projectileHitMask:
     serializedVersion: 2
     m_Bits: 8
-  projectileDamage: 1
-  hitEffectPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 1202143924857535766, guid: 21fe411b564bf0c41abc5f9475f9a078, type: 3}
 --- !u!120 &1734826533
 LineRenderer:
   serializedVersion: 2
