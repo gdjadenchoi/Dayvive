@@ -2410,6 +2410,13 @@ MonoBehaviour:
   ammo: {fileID: 1734826534}
   maxRange: 12
   fireCooldown: 0.2
+  projectilePrefab: {fileID: -524564332554067475, guid: 3a48521c823bf9243a262b5ceeca9b10, type: 3}
+  projectileSpeed: 20
+  projectileHitMask:
+    serializedVersion: 2
+    m_Bits: 8
+  projectileDamage: 1
+  hitEffectPrefab: {fileID: 0}
 --- !u!120 &1734826533
 LineRenderer:
   serializedVersion: 2
