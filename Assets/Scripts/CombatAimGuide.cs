@@ -104,6 +104,8 @@ public class CombatAimGuide : MonoBehaviour
 
     public void SetMaxRange(float r) => maxRange = Mathf.Max(0f, r);
 
+    public float MaxRange => maxRange;
+
     void ApplyColor()
     {
         if (!lr) return;

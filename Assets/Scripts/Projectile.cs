@@ -1,14 +1,14 @@
+// Assets/Scripts/Projectile.cs
 using UnityEngine;
 
 /// <summary>
 /// 단순 직진 투사체:
-/// - Shooter가 전달한 speed/maxDistance/mask로 런타임 오버라이드(InitRuntime)
+/// - Shooter가 전달한 speed/maxDistance/mask/damage로 런타임 오버라이드
 /// - 거리 초과 시 자동 파괴
-/// - 충돌 레이어가 mask에 포함되면 히트 이펙트 후 파괴
+/// - 충돌 레이어가 mask에 포함되면 데미지 적용 + 히트 이펙트 후 파괴
 /// 필요 컴포넌트:
 /// - Rigidbody2D(추천: Dynamic/Continuous 또는 Kinematic)
 /// - CircleCollider2D (IsTrigger = true)
-/// 프리팹 인스펙터 속도/사거리는 '예비값'이며, Shooter가 넘기면 덮어씀.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class Projectile : MonoBehaviour
@@ -18,6 +18,10 @@ public class Projectile : MonoBehaviour
     [SerializeField] float maxDistance = 12f;     // 프리팹 기본값 (런타임이 없을 때만 사용)
     [SerializeField] LayerMask hitMask;           // 프리팹 기본값 (런타임이 없을 때만 사용)
 
+    [Header("Damage (defaults)")]
+    [SerializeField] int damageEnemy = 1;
+    [SerializeField] int damageMineable = 1;
+
     [Header("VFX (optional)")]
     [SerializeField] GameObject hitEffectPrefab;  // 충돌 지점 이펙트 (선택)
 
@@ -25,6 +29,7 @@ public class Projectile : MonoBehaviour
     bool hasRuntime;
     float rtSpeed, rtMaxDistance;
     LayerMask rtMask;
+    int rtDmgEnemy, rtDmgMineable;
     Transform owner;
 
     // 내부 상태
@@ -34,7 +39,15 @@ public class Projectile : MonoBehaviour
     /// <summary>
     /// Shooter에서 호출. 전달된 값으로 프리팹 값을 덮어씁니다.
     /// </summary>
-    public void InitRuntime(Transform owner, Vector2 dir, float speed, float maxDistance, LayerMask mask, GameObject hitFx = null)
+    public void InitRuntime(
+        Transform owner,
+        Vector2 dir,
+        float speed,
+        float maxDistance,
+        LayerMask mask,
+        GameObject hitFx = null,
+        int dmgEnemy = -1,
+        int dmgMineable = -1)
     {
         this.owner = owner;
         this.moveDir = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector2.right;
@@ -43,6 +56,8 @@ public class Projectile : MonoBehaviour
         rtSpeed = speed;
         rtMaxDistance = maxDistance;
         rtMask = mask;
+        rtDmgEnemy = (dmgEnemy >= 0) ? dmgEnemy : damageEnemy;
+        rtDmgMineable = (dmgMineable >= 0) ? dmgMineable : damageMineable;
         if (hitFx != null) hitEffectPrefab = hitFx;
 
         // 활성 직후에도 바로 이동하도록 초기화
@@ -65,7 +80,7 @@ public class Projectile : MonoBehaviour
 
         transform.position += (Vector3)moveDir * spd * Time.deltaTime;
 
-        // 사거리 초과 시 파괴 (가이드와 1:1 동기화)
+        // 사거리 초과 시 파괴 (에임 가이드와 1:1 동기화)
         if ((transform.position - startPos).sqrMagnitude >= maxD * maxD)
         {
             Destroy(gameObject);
@@ -81,17 +96,39 @@ public class Projectile : MonoBehaviour
         int otherBit = 1 << other.gameObject.layer;
         if ((mask.value & otherBit) == 0) return;
 
-        // 히트 이펙트(선택)
-        if (hitEffectPrefab)
+        // ----- 데미지 적용 분기 -----
+        int dmgEnemyUse = hasRuntime ? rtDmgEnemy : damageEnemy;
+        int dmgMineableUse = hasRuntime ? rtDmgMineable : damageMineable;
+
+        // 1) 적: IDamageable 이면 적으로 간주
+        var dmgComp = other.GetComponent<IDamageable>();
+        if (dmgComp != null)
         {
-            Vector3 hitPoint = other.ClosestPoint(transform.position);
-            Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
+            dmgComp.ApplyDamage(Mathf.Max(1, dmgEnemyUse));
+            SpawnHitFx(other);
+            Destroy(gameObject);
+            return;
         }
 
-        // (데미지 적용은 후속 단계에서 연결)
-        // var dmg = other.GetComponent<IDamageable>();
-        // if (dmg != null) dmg.ApplyDamage( ... );
+        // 2) 채굴 대상: Mineable 컴포넌트
+        var mine = other.GetComponent<Mineable>();
+        if (mine != null)
+        {
+            mine.ApplyDamage(Mathf.Max(1, dmgMineableUse)); // Mineable은 이미 ApplyDamage 제공 :contentReference[oaicite:1]{index=1}
+            SpawnHitFx(other);
+            Destroy(gameObject);
+            return;
+        }
 
+        // 기타 충돌: 마스크 안에만 들었다면 이펙트 후 파괴
+        SpawnHitFx(other);
         Destroy(gameObject);
+    }
+
+    void SpawnHitFx(Collider2D other)
+    {
+        if (!hitEffectPrefab) return;
+        Vector3 hitPoint = other.ClosestPoint(transform.position);
+        Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
     }
 }

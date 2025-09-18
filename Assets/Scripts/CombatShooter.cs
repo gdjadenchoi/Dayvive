@@ -9,21 +9,22 @@ public class CombatShooter : MonoBehaviour
     [SerializeField] Camera cam;                  // 메인 카메라
     [SerializeField] Transform muzzle;            // 없으면 player.position 사용
     [SerializeField] CombatAmmo ammo;
-    [SerializeField] CombatAimGuide aimGuide;     // (선택) 에임 가이드 동기화용
+    [SerializeField] CombatAimGuide aimGuide;     // 에임 가이드(선택)
 
     [Header("Aim")]
-    [SerializeField] float maxRange = 12f;        // 가이드/사거리
+    [SerializeField] float maxRange = 12f;        // 가이드/사거리 (에임 가이드가 있으면 그 값을 사용)
 
     [Header("Fire")]
     [SerializeField] float fireCooldown = 0.20f;
+    float cd;
 
     [Header("Projectile")]
     [SerializeField] Projectile projectilePrefab; // 프리팹 필수
-    [SerializeField] float projectileSpeed = 20f; // ★ 단일 출처 (Shooter가 보유)
+    [SerializeField] float projectileSpeed = 20f;
     [SerializeField] LayerMask projectileHitMask; // Enemy, Resource 등
-    [SerializeField] GameObject hitEffectPrefab;  // (선택)
-
-    float cd;
+    [SerializeField] int damageToEnemy = 1;
+    [SerializeField] int damageToMineable = 1;
+    [SerializeField] GameObject hitEffectPrefab;
 
     void Reset()
     {
@@ -38,7 +39,6 @@ public class CombatShooter : MonoBehaviour
         if (!cam) cam = Camera.main;
         if (!ammo) ammo = GetComponent<CombatAmmo>();
         if (!playerMode) playerMode = GetComponent<PlayerMode>();
-        if (!aimGuide) aimGuide = GetComponentInChildren<CombatAimGuide>(true);
     }
 
     bool IsCombat()
@@ -48,10 +48,9 @@ public class CombatShooter : MonoBehaviour
     {
         if (!IsCombat()) return;
 
-        // 쿨다운
         if (cd > 0f) cd -= Time.deltaTime;
 
-        // 장전
+        // R: 장전
         if (Input.GetKeyDown(KeyCode.R))
         {
             int loaded = ammo.Reload();
@@ -68,10 +67,11 @@ public class CombatShooter : MonoBehaviour
         if (cd > 0f) return;
         if (!projectilePrefab) return;
 
-        // 탄 없는 경우
+        // 탄 확인
         if (!ammo.HasAmmo)
         {
-            Debug.Log("No ammo");
+            // 자동장전 원하면 여기에서 ammo.Reload() 시도 가능
+            // if (ammo.Reload() > 0) return;
             return;
         }
 
@@ -81,24 +81,31 @@ public class CombatShooter : MonoBehaviour
         Vector3 origin = muzzle ? muzzle.position : player.position;
         Vector3 m = cam.ScreenToWorldPoint(Input.mousePosition);
         m.z = origin.z;
-        Vector3 dir = (m - origin).normalized;
+        Vector2 dir = ((Vector2)(m - origin)).sqrMagnitude > 0.0001f
+                      ? (m - origin).normalized
+                      : Vector2.right;
 
-        // 발사체 생성 + 런타임 파라미터 전달(★ Shooter가 단일 출처)
-        Quaternion rot = Quaternion.FromToRotation(Vector3.right, dir);
-        var proj = Instantiate(projectilePrefab, origin, rot);
+        // 에임 가이드와 동기화된 사거리 사용(없으면 로컬 maxRange)
+        float range = aimGuide ? aimGuide.MaxRange : maxRange;
+
+        // 발사체 생성 + 런타임 파라미터 주입
+        var proj = Instantiate(projectilePrefab, origin, Quaternion.identity);
         proj.InitRuntime(
             owner: player,
             dir: dir,
             speed: projectileSpeed,
-            maxDistance: maxRange,          // ★ 가이드와 완전 동기화
+            maxDistance: range,
             mask: projectileHitMask,
-            hitFx: hitEffectPrefab
+            hitFx: hitEffectPrefab,
+            dmgEnemy: damageToEnemy,
+            dmgMineable: damageToMineable
         );
 
         // 탄약 소모/쿨다운
         if (ammo.Consume(1))
             cd = fireCooldown;
 
-        Debug.Log("pew");
+        // (선택) 디버그: 사거리 시각 확인
+        // Debug.DrawLine(origin, origin + (Vector3)dir * range, Color.red, 0.05f);
     }
 }
