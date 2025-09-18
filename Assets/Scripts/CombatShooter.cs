@@ -12,7 +12,7 @@ public class CombatShooter : MonoBehaviour
     [SerializeField] CombatAimGuide aimGuide;     // 에임 가이드(선택)
 
     [Header("Aim")]
-    [SerializeField] float maxRange = 12f;        // 가이드/사거리 (에임 가이드가 있으면 그 값을 사용)
+    [SerializeField] float maxRange = 12f;        // 가이드/사거리 (에임 가이드 있으면 그 값 사용)
 
     [Header("Fire")]
     [SerializeField] float fireCooldown = 0.20f;
@@ -22,8 +22,7 @@ public class CombatShooter : MonoBehaviour
     [SerializeField] Projectile projectilePrefab; // 프리팹 필수
     [SerializeField] float projectileSpeed = 20f;
     [SerializeField] LayerMask projectileHitMask; // Enemy, Resource 등
-    [SerializeField] int damageToEnemy = 1;
-    [SerializeField] int damageToMineable = 1;
+    [SerializeField] int damageToEnemy = 1;       // 현재 Projectile은 단일 damage만 받음
     [SerializeField] GameObject hitEffectPrefab;
 
     void Reset()
@@ -68,13 +67,7 @@ public class CombatShooter : MonoBehaviour
         if (!projectilePrefab) return;
 
         // 탄 확인
-        if (!ammo.HasAmmo)
-        {
-            // 자동장전 원하면 여기에서 ammo.Reload() 시도 가능
-            // if (ammo.Reload() > 0) return;
-            return;
-        }
-
+        if (!ammo.HasAmmo) return;
         if (!cam) return;
 
         // 발사 방향 계산
@@ -90,22 +83,21 @@ public class CombatShooter : MonoBehaviour
 
         // 발사체 생성 + 런타임 파라미터 주입
         var proj = Instantiate(projectilePrefab, origin, Quaternion.identity);
-        proj.InitRuntime(
+        // NOTE: Projectile은 Init(...)만 존재 (InitRuntime 없음)  :contentReference[oaicite:1]{index=1}
+        proj.Init(
             owner: player,
             dir: dir,
             speed: projectileSpeed,
-            maxDistance: range,
+            maxDist: range,
+            dmg: damageToEnemy,
             mask: projectileHitMask,
-            hitFx: hitEffectPrefab,
-            dmgEnemy: damageToEnemy,
-            dmgMineable: damageToMineable
+            hitFx: hitEffectPrefab
         );
 
         // 탄약 소모/쿨다운
         if (ammo.Consume(1))
             cd = fireCooldown;
 
-        // (선택) 디버그: 사거리 시각 확인
         // Debug.DrawLine(origin, origin + (Vector3)dir * range, Color.red, 0.05f);
     }
 }

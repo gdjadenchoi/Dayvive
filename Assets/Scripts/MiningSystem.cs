@@ -200,7 +200,9 @@ public class MiningSystem : MonoBehaviour
 
             Vector2 q = col.ClosestPoint(c);
             if ((q - c).sqrMagnitude <= r2 && col.TryGetComponent(out Mineable m))
-                m.ApplyDamage(damagePerTick);
+            {
+                m.ApplyDamage(damagePerTick, DamageType.Mining);   // ✅ 통일
+            }
         }
     }
 

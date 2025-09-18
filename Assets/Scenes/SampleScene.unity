@@ -2415,7 +2415,9 @@ MonoBehaviour:
   projectileSpeed: 20
   projectileHitMask:
     serializedVersion: 2
-    m_Bits: 8
+    m_Bits: 264
+  damageToEnemy: 2
+  damageToMineable: 1
   hitEffectPrefab: {fileID: 1202143924857535766, guid: 21fe411b564bf0c41abc5f9475f9a078, type: 3}
 --- !u!120 &1734826533
 LineRenderer:

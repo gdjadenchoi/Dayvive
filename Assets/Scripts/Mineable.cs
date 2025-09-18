@@ -1,23 +1,25 @@
 ﻿// Assets/Scripts/Mineable.cs
-using System.Collections;
 using UnityEngine;
 using TMPro;
 
 [RequireComponent(typeof(Collider2D))]
-public class Mineable : MonoBehaviour
+public class Mineable : MonoBehaviour, IDamageable
 {
     [Header("Identity")]
     public string id = "A";
 
     [Header("Health")]
     public int hpMax = 3;
-    [HideInInspector] public int hp = 3; // 인스펙터 혼동 방지
+    [HideInInspector] public int hp = 3;
 
     [Header("UI (Optional)")]
     [SerializeField] TextMeshPro hpText;
 
     [Header("Drops")]
     [SerializeField] LootTable lootTable; // 없으면 id 1개 기본 지급
+
+    // 마지막 타격 타입(드랍 조건 판단)
+    DamageType _lastDamageType = DamageType.Generic;
 
     // 파괴 시 리필 요청을 위한 StageController 캐시 (정적)
     static StageController s_stage;
@@ -31,7 +33,7 @@ public class Mineable : MonoBehaviour
 
     void OnEnable()
     {
-        hp = hpMax;           // 항상 풀피로 시작
+        hp = hpMax;
         UpdateHpUI();
         EnsureStageCached();
     }
@@ -45,14 +47,17 @@ public class Mineable : MonoBehaviour
 #endif
     }
 
-    // 기존 MiningSystem과 호환
-    public void ApplyDamage(int dmg = 1) => TakeDamage(dmg);
-
-    public void TakeDamage(int dmg = 1)
+    // === IDamageable 구현(확장 시그니처) ===
+    public void ApplyDamage(int amount, DamageType type)
     {
         if (hp <= 0) return;
+
+        _lastDamageType = type;
+        int dmg = Mathf.Max(0, amount);
+
         hp = Mathf.Max(0, hp - dmg);
         UpdateHpUI();
+
         if (hp == 0) Die();
     }
 
@@ -63,31 +68,24 @@ public class Mineable : MonoBehaviour
 
     void Die()
     {
-        // 드롭
-        if (lootTable != null)
+        // 채굴로 파괴된 경우에만 드랍
+        if (_lastDamageType == DamageType.Mining)
         {
-            var drops = lootTable.Roll(); // drop.itemId, drop.count
-            foreach (var d in drops) RunInventory.I?.Add(d.itemId, d.count);
+            if (lootTable != null)
+            {
+                var drops = lootTable.Roll();
+                foreach (var d in drops) RunInventory.I?.Add(d.itemId, d.count);
+            }
+            else
+            {
+                RunInventory.I?.Add(id, 1);
+            }
         }
-        else
-        {
-            RunInventory.I?.Add(id, 1);
-        }
+        // 총알/폭발/기타는 드랍 없음
 
-        // 다음 프레임에 리필 체크 (이 오브젝트가 실제로 사라진 뒤 카운트하게)
-        // StartCoroutine(_RefillNextFrame());
         EnsureStageCached();
         s_stage?.RequestRefillNextFrame();
 
         Destroy(gameObject);
-    }
-
-    IEnumerator _RefillNextFrame()
-    {
-        yield return null;
-        if (s_stage != null)
-        {
-            s_stage.RefillIfNeeded();
-        }
     }
 }
