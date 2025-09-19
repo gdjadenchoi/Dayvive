@@ -2,9 +2,9 @@ using UnityEngine;
 
 /// <summary>
 /// Dayvive - Player movement controller (WASD/Arrow).
-/// - �⺻ �Է�: Ű���� (Horizontal/Vertical)
-/// - �ܺ� �Է�(���� ���̽�ƽ ��) ����: SetExternalMove() ȣ�� �� �� ���͸� �켱 ���
-/// - ����: SpawnArea(BoxCollider2D) ���� �̵� Ŭ����
+/// - 기본 입력: 키보드 (Horizontal/Vertical)
+/// - 외부 입력(예: 터치 드래그) 지원: SetExternalMove() 호출 시 키보드 입력보다 우선 적용
+/// - 이동: SpawnArea(BoxCollider2D) 영역 내로 클램프
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerMover : MonoBehaviour
@@ -12,20 +12,20 @@ public class PlayerMover : MonoBehaviour
     [Header("Move")]
     [SerializeField] private float moveSpeed = 4.0f;
     [SerializeField] private bool useFixedUpdate = true;
-    [Tooltip("�ܺ� �Է��� 0�� �ƴ� ��, Ű���� ��� �ܺ� �Է��� ���")]
+    [Tooltip("외부 입력이 0이 아닐 경우, 키보드 입력보다 외부 입력을 우선 적용")]
     [SerializeField] private bool preferExternalInput = true;
 
     [Header("Clamp")]
-    [Tooltip("�÷��̾ �� ����(BoxCollider2D) ���η� ���� (����)")]
+    [Tooltip("플레이어를 이 영역(BoxCollider2D) 내부로 제한 (필드 영역)")]
     [SerializeField] private BoxCollider2D spawnArea;
-    [SerializeField] private Vector2 clampPadding = new Vector2(0.3f, 0.3f); // �����ڸ� ����
+    [SerializeField] private Vector2 clampPadding = new Vector2(0.3f, 0.3f); // 벽과의 여유 거리
 
     // components
     private Rigidbody2D rb;
 
     // input caches
-    private Vector2 externalMove;   // ���� ���̽�ƽ ��� ����
-    private bool hasExternal;       // �ܺ� �Է� ��� ����(������ ����)
+    private Vector2 externalMove;   // 외부 시스템 입력에서 전달된 값
+    private bool hasExternal;       // 외부 입력 여부 (한 프레임만 유지)
 
     // runtime
     private Vector2 currentMove;
@@ -48,8 +48,8 @@ public class PlayerMover : MonoBehaviour
         }
         else
         {
-            // FixedUpdate���� ó��
-            // ��, �Է� ������ �� ������ �ݿ��ǰ� Update���� �о ��
+            // FixedUpdate에서 처리
+            // 단, 입력만 이곳에서 읽고 FixedUpdate에서 반영할 수도 있음
         }
     }
 
@@ -63,16 +63,16 @@ public class PlayerMover : MonoBehaviour
 
     private void Step(float deltaTime)
     {
-        // 1) �Է� �б�
+        // 1) 입력 읽기
         Vector2 input = ReadInput();
 
-        // 2) �̵� ���� ���
+        // 2) 이동 벡터 계산
         currentMove = input.normalized * moveSpeed;
 
-        // 3) �̵� �ݿ�
+        // 3) 목표 위치 계산
         Vector2 targetPos = rb.position + currentMove * deltaTime;
 
-        // 4) Ŭ���� (����)
+        // 4) 스폰 영역으로 클램프
         if (spawnArea != null)
         {
             targetPos = ClampToSpawnArea(targetPos);
@@ -80,30 +80,30 @@ public class PlayerMover : MonoBehaviour
 
         rb.MovePosition(targetPos);
 
-        // �ܺ� �Է� �÷��״� �����Ӹ��� �ʱ�ȭ
+        // 외부 입력은 한 프레임만 유지 → 초기화
         hasExternal = false;
     }
 
     private Vector2 ReadInput()
     {
-        // �ܺ� �Է� ����(���� ���̽�ƽ ��) �켱
+        // 외부 입력(예: 터치 드래그)이 있으면 우선
         if (preferExternalInput && hasExternal && externalMove.sqrMagnitude > 0.0001f)
         {
             return Vector2.ClampMagnitude(externalMove, 1f);
         }
 
-        // Ű���� �Է� (Unity �⺻ ��)
-        float x = Input.GetAxisRaw("Horizontal"); // A/D, ��/��
-        float y = Input.GetAxisRaw("Vertical");   // W/S, ��/��
+        // 키보드 입력 (Unity 기본 축)
+        float x = Input.GetAxisRaw("Horizontal"); // A/D, ←/→
+        float y = Input.GetAxisRaw("Vertical");   // W/S, ↑/↓
         return new Vector2(x, y);
     }
 
     private Vector2 ClampToSpawnArea(Vector2 worldPos)
     {
-        // BoxCollider2D�� ���� ��� ���
+        // BoxCollider2D 기준 영역
         Bounds b = spawnArea.bounds;
 
-        // �÷��̾� �ڽ��� �ݶ��̴� ũ�⸦ ����(�ִٸ�)
+        // 플레이어 자신의 콜라이더 크기 고려
         Vector2 pad = clampPadding;
         Collider2D selfCol = GetComponent<Collider2D>();
         if (selfCol != null)
@@ -123,7 +123,7 @@ public class PlayerMover : MonoBehaviour
     }
 
     /// <summary>
-    /// ����� ���� ���̽�ƽ ��� �� ������ ȣ���� �ܺ� �Է��� ����.
+    /// 외부 시스템 입력을 통해 이동 방향을 설정.
     /// expected range: [-1, 1]
     /// </summary>
     public void SetExternalMove(Vector2 moveAxis01)
@@ -132,7 +132,7 @@ public class PlayerMover : MonoBehaviour
         hasExternal = true;
     }
 
-    // ����׿� �����: Ŭ���� ���� �ð�ȭ
+    // 디버그용: 스폰 영역 시각화
     void OnDrawGizmosSelected()
     {
         if (spawnArea == null) return;
@@ -140,7 +140,7 @@ public class PlayerMover : MonoBehaviour
         var b = spawnArea.bounds;
         Gizmos.DrawCube(b.center, b.size);
 
-        // �е� ����
+        // 내부 영역 (패딩 적용)
         Gizmos.color = new Color(0f, 0.9f, 0.4f, 0.6f);
         Vector2 pad = clampPadding;
         Collider2D selfCol = GetComponent<Collider2D>();
